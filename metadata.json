@@ -1,0 +1,5 @@
+{
+  "name": "Tra Cứu Dữ Liệu Google Sheet",
+  "description": "Ứng dụng tra cứu thông tin từ Google Sheet với tính năng tìm kiếm thông minh theo viết tắt và tên đầy đủ.",
+  "requestFramePermissions": []
+}
