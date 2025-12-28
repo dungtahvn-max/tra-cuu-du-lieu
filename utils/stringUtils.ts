@@ -13,7 +13,6 @@ export const removeDiacritics = (str: string): string => {
 
 /**
  * Tạo chuỗi viết tắt (acronym).
- * Ví dụ: "Nguyễn Văn A" -> "nva", "U.Hưng" -> "uh"
  */
 export const getAcronym = (text: string): string => {
   const normalized = removeDiacritics(text);
@@ -33,42 +32,42 @@ export const cleanForCompare = (str: string): string => {
 
 /**
  * Tính toán điểm phù hợp của từ khóa tìm kiếm.
+ * Hỗ trợ tìm theo cụm từ: "pham trang" khớp "Phạm Thị Trắng"
  */
 export const getRelevanceScore = (query: string, target: string): number => {
-  if (!query) return 0;
+  if (!query.trim()) return 0;
   
-  const qOrig = query.trim();
-  const tOrig = target.trim();
+  const qNorm = removeDiacritics(query.trim());
+  const tNorm = removeDiacritics(target);
   
-  const qNorm = removeDiacritics(qOrig);
-  const tNorm = removeDiacritics(tOrig);
+  // Tách query thành các từ đơn
+  const qWords = qNorm.split(/\s+/).filter(w => w.length > 0);
   
-  const qClean = cleanForCompare(qOrig);
-  const tClean = cleanForCompare(tOrig);
+  // Kiểm tra xem TẤT CẢ các từ trong query có xuất hiện trong target không
+  const allWordsPresent = qWords.every(word => tNorm.includes(word));
   
-  const qAcro = getAcronym(qOrig);
-  const tAcro = getAcronym(tOrig);
+  if (allWordsPresent) {
+    let score = 1000;
+    
+    // Thưởng nếu khớp cả cụm từ liên tục
+    if (tNorm.includes(qNorm)) score += 1000;
+    
+    // Thưởng nếu bắt đầu bằng từ đầu tiên của query
+    if (tNorm.startsWith(qWords[0])) score += 500;
+    
+    // Thưởng cho mỗi từ khớp chính xác (không chỉ là chuỗi con)
+    const tWords = tNorm.split(/[\s.]+/);
+    qWords.forEach(qw => {
+      if (tWords.includes(qw)) score += 200;
+    });
 
-  // 1. Khớp chính xác tuyệt đối
-  if (qNorm === tNorm) return 3000;
+    return score;
+  }
   
-  // 2. Tên trong danh sách bắt đầu bằng từ khóa
-  if (tNorm.startsWith(qNorm)) return 2000;
-
-  // 3. Khớp từ viết tắt hoàn toàn (nva -> Nguyễn Văn A hoặc ngược lại)
-  if (qClean === tAcro || tClean === qAcro) return 1500;
-
-  // 4. Khớp Shorthand (Ví dụ: Nhập Uyên Hưng [qAcro=uh] khớp U.Hưng [tAcro=uh])
-  if (qAcro === tAcro && qAcro.length > 1) return 1400;
-
-  // 5. Khớp chứa chuỗi con
-  if (tNorm.includes(qNorm)) return 1000;
-
-  // 6. Khớp một phần viết tắt (Ví dụ: nhập "nv" cũng ra "Nguyễn Văn A")
-  if (tAcro.startsWith(qClean) || qAcro.startsWith(tClean)) return 800;
-
-  // 7. Khớp "sạch" (bỏ qua dấu chấm và khoảng trắng)
-  if (tClean.includes(qClean) || qClean.includes(tClean)) return 500;
+  // Fallback: Kiểm tra viết tắt (acronym)
+  const qClean = cleanForCompare(query);
+  const tAcro = getAcronym(target);
+  if (tAcro.includes(qClean)) return 500;
 
   return 0;
 };
